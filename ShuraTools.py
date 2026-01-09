@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ShuraTools.py – Swiss-army knife para spam, banimento e OSINT.
-Versão Pro v2.0
+Versão Pro v2.1
 """
 
 import os
@@ -35,20 +35,20 @@ BANNER = f"""
 {Fore.CYAN}  ____) | |  | |  | |     | |  | |__| | |____ 
 {Fore.CYAN} |_____/|_|  |_|  |_|     |_|  |_____/|______|
  {Fore.YELLOW}SpamMail | SpamZap | BanIG | OSINT | Proxies
- {Fore.RED}v2.0 Pro - by Shura & Antigravity AI
+ {Fore.RED}v2.1 Pro - by Shura & Antigravity AI
 """
 
 # ---------- Configurações e Recursos ----------
 LOCK = threading.Lock()
 PROXY_QUEUE = Queue()
 
-# User-Agents Modernos e Variados
+# User-Agents Modernos (2025/2026)
 UA_LIST = [
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Mobile Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-    "Instagram 300.0.0.30.110 Android (33/13; 480dpi; 1080x2214; Google; Pixel 7; cheetah; cheetah; en_US; 520211153)"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/19.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 15; Pixel 9 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Instagram 350.0.0.50.110 Android (34/14; 560dpi; 1440x3120; Google; Pixel 9; en_US; 620211153)"
 ]
 
 def get_rnd_ua():
@@ -72,7 +72,9 @@ def fetch_proxies():
     log("Buscando lista de proxies atualizada...", "info")
     urls = [
         "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all",
-        "https://www.proxy-list.download/api/v1/get?type=https"
+        "https://www.proxy-list.download/api/v1/get?type=http",
+        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
+        "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt"
     ]
     count = 0
     for url in urls:
@@ -119,13 +121,17 @@ def osint_lookup(target):
     
     # 1. Checar se é e-mail
     if "@" in target:
-        log("Checando vazamentos de e-mail (HaveIBeenPwned API)...", "info")
+        log("Verificando vazamentos (Atenção: HIBP requer API Key)...", "info")
         try:
+            # HIBP v3 requer header 'hibp-api-key'. Sem ela, retornará 401.
+            # Adicionei um fallback informativo.
             r = requests.get(f"https://haveibeenpwned.com/api/v3/breachedaccount/{target}", timeout=5)
             if r.status_code == 200:
                 log(f"ALERTA: E-mail encontrado em vazamentos!", "warn")
+            elif r.status_code == 401:
+                log("HIBP: Requer API Key para busca detalhada. Visite haveibeenpwned.com", "warn")
             else:
-                log("Nenhum vazamento público encontrado para este e-mail.", "success")
+                log("Nenhum vazamento público encontrado via HIBP.", "success")
         except:
             log("Erro ao conectar com HaveIBeenPwned.", "error")
 

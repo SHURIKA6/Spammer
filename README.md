@@ -1,4 +1,4 @@
-# ShuraTools Pro v2.0 🛠️
+# ShuraTools Pro v2.1 🛠️
 
 O **ShuraTools** evoluiu. De um simples script de spam, agora ele é uma ferramenta completa de **Pentest, OSINT e Automação de Carga**. Desenvolvido para entusiastas de segurança e administradores de sistemas.
 
@@ -18,10 +18,10 @@ O **ShuraTools** evoluiu. De um simples script de spam, agora ele é uma ferrame
 
 ```bash
 # Clone o repositório
-git clone https://github.com/SHURIKA6/Spammer.git
+git clone https://github.com/SHURIKA6/ShuraTools.git
 
 # Entre na pasta
-cd Spammer
+cd ShuraTools
 
 # Instale as dependências (Colorama, Requests, Faker)
 pip install -r requirements.txt
@@ -80,4 +80,4 @@ python ShuraTools.py --ig --target @usuario_alvo
 Esta ferramenta foi criada estritamente para fins **educacionais e testes autorizados**. O autor não se responsabiliza pelo uso indevido para fins ilícitos, assédio ou qualquer atividade que viole os termos de serviço das plataformas mencionadas. Use com ética e responsabilidade.
 
 ---
-**Desenvolvido por Shura & Antigravity AI** 🛡️
+**Desenvolvido por Shura** 🛡️
