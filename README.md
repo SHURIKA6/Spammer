@@ -1,56 +1,83 @@
-<<<<<<< HEAD
-# ShuraTools 🛠️
+# ShuraTools Pro v2.0 🛠️
 
-Swiss-army knife para testes de carga e automação de reports (SpamMail, SpamZap, BanIG).
+O **ShuraTools** evoluiu. De um simples script de spam, agora ele é uma ferramenta completa de **Pentest, OSINT e Automação de Carga**. Desenvolvido para entusiastas de segurança e administradores de sistemas.
 
-## 🚀 Instalação
+---
 
-Para usar o script, clone o repositório e instale as dependências:
+## ✨ O que há de novo na v2.0 Pro?
+
+*   **🔍 OSINT Hunter**: Rastreie usuários em +4 plataformas e verifique vazamentos de e-mail (API Breach Check).
+*   **📡 Port Scanner**: Verifique a segurança da sua rede escaneando portas abertas em IPs ou domínios.
+*   **🌐 Auto-Proxy**: Busca automática de proxies HTTP/HTTPS em fontes públicas (não precisa mais de lista manual!).
+*   **🎨 Terminal Moderno**: Interface colorida para facilitar a leitura de logs em tempo real.
+*   **🚀 Multi-Threading Otimizado**: Distribuição inteligente de carga para máxima eficiência.
+
+---
+
+## 🚀 Instalação Rápida
 
 ```bash
 # Clone o repositório
-git clone https://github.com/SEU_USUARIO/ShuraTools.git
+git clone https://github.com/SHURIKA6/Spammer.git
 
 # Entre na pasta
-cd ShuraTools
+cd Spammer
 
-# Instale as dependências
+# Instale as dependências (Colorama, Requests, Faker)
 pip install -r requirements.txt
 ```
 
-## 🛠️ Uso
+---
 
-O script aceita diversas flags para configurar o seu teste.
+## 🛠️ Como Usar
 
-### Exemplos:
-
-**Spam de E-mail:**
+### 1. Investigação (OSINT)
+Descubra a presença digital de um alvo através do username ou verifique vulnerabilidades em um e-mail.
 ```bash
-python3 ShuraTools.py --mail --target vitima@gmail.com --qty 100 --threads 20
+python ShuraTools.py --osint --target @usuario_alvo
 ```
 
-**Denúncia de WhatsApp:**
+### 2. Scanner de Rede (PortScan)
+Veja quais serviços estão rodando em um servidor.
 ```bash
-python3 ShuraTools.py --zap --target 5511999999999 --qty 50 --threads 10
+python ShuraTools.py --scan --target 182.23.44.1
 ```
 
-**Report de Instagram:**
+### 3. Teste de Carga / Spam (Mail)
+Envie fluxos de requisições com rotação de identidade e proxy.
 ```bash
-python3 ShuraTools.py --ig --target @usuario_alvo --qty 30 --threads 5
+python ShuraTools.py --mail --target vitima@gmail.com --qty 100 --threads 20 --proxy
 ```
 
-### Argumentos:
-- `--mail`: Ativa o módulo de Spam de E-mail.
-- `--zap`: Ativa o módulo de Denúncia de WhatsApp.
-- `--ig`: Ativa o módulo de Report de Instagram.
-- `--target`: O alvo (email, telefone com DDI ou @user).
-- `--qty`: Quantidade total de requisições.
-- `--threads`: Número de processos simultâneos.
-- `--proxy`: Ativa o uso de proxies rotativos (opcional).
-- `--timer`: Delay em segundos entre cada requisição.
+### 4. Denúncia Automática (Social)
+Módulos de report para contenção de abusos em plataformas sociais.
+```bash
+python ShuraTools.py --zap --target 5511999999999 --qty 50
+python ShuraTools.py --ig --target @usuario_alvo
+```
 
 ---
-**Aviso:** Este script foi criado para fins educacionais e testes de estresse em sistemas próprios. O uso indevido para assédio ou atividades ilícitas é de total responsabilidade do usuário.
-=======
-# Spammer
->>>>>>> 7ae4cd8e8da4c5dbe92abc229478f0571ff43b99
+
+## ⚙️ Argumentos e Opções
+
+| Flag | Descrição |
+| :--- | :--- |
+| `--mail` | Ativa o módulo de Spam de E-mail. |
+| `--osint` | Ativa o módulo de investigação de pegada digital. |
+| `--scan` | Executa o port scanner no alvo. |
+| `--zap` | Módulo de denúncia de WhatsApp. |
+| `--ig` | Módulo de report de Instagram. |
+| `--target` | Define o alvo (email, fone, @user ou IP). |
+| `--qty` | Quantidade total de requisições/instâncias. |
+| `--threads` | Número de processos simultâneos. |
+| `--proxy` | Busca e usa proxies rotativos automaticamente. |
+| `--timer` | Delay entre as ações (em segundos). |
+
+---
+
+## ⚠️ Aviso Legal (Disclaimer)
+
+Esta ferramenta foi criada estritamente para fins **educacionais e testes autorizados**. O autor não se responsabiliza pelo uso indevido para fins ilícitos, assédio ou qualquer atividade que viole os termos de serviço das plataformas mencionadas. Use com ética e responsabilidade.
+
+---
+**Desenvolvido por Shura & Antigravity AI** 🛡️
