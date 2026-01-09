@@ -34,26 +34,26 @@ pip install -r requirements.txt
 ### 1. Investigação (OSINT)
 Descubra a presença digital de um alvo através do username ou verifique vulnerabilidades em um e-mail.
 ```bash
-python Spammer.py --osint --target @usuario_alvo
+python ShuraTools.py --osint --target @usuario_alvo
 ```
 
 ### 2. Scanner de Rede (PortScan)
 Veja quais serviços estão rodando em um servidor.
 ```bash
-python Spammer.py --scan --target 182.23.44.1
+python ShuraTools.py --scan --target 182.23.44.1
 ```
 
 ### 3. Teste de Carga / Spam (Mail)
 Envie fluxos de requisições com rotação de identidade e proxy.
 ```bash
-python Spammer.py --mail --target vitima@gmail.com --qty 100 --threads 20 --proxy
+python ShuraTools.py --mail --target vitima@gmail.com --qty 100 --threads 20 --proxy
 ```
 
 ### 4. Denúncia Automática (Social)
 Módulos de report para contenção de abusos em plataformas sociais.
 ```bash
-python Spammer.py --zap --target 5511999999999 --qty 50
-python Spammer.py --ig --target @usuario_alvo
+python ShuraTools.py --zap --target 5511999999999 --qty 50
+python ShuraTools.py --ig --target @usuario_alvo
 ```
 
 ---
