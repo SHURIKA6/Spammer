@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ShuraTools 🛠️
 
 Swiss-army knife para testes de carga e automação de reports (SpamMail, SpamZap, BanIG).
@@ -50,3 +51,6 @@ python3 ShuraTools.py --ig --target @usuario_alvo --qty 30 --threads 5
 
 ---
 **Aviso:** Este script foi criado para fins educacionais e testes de estresse em sistemas próprios. O uso indevido para assédio ou atividades ilícitas é de total responsabilidade do usuário.
+=======
+# Spammer
+>>>>>>> 7ae4cd8e8da4c5dbe92abc229478f0571ff43b99
